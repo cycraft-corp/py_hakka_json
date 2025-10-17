@@ -26,7 +26,7 @@ jobs:
           - os: ubuntu-latest
             arch: x86_64
             platform: linux
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             arch: aarch64
             platform: linux
           - os: macos-15-intel
@@ -68,12 +68,6 @@ jobs:
       if: matrix.platform == 'win32'
       run: |
         choco install cmake
-
-    - name: Set up QEMU (Linux aarch64)
-      if: matrix.platform == 'linux' && matrix.arch == 'aarch64'
-      uses: docker/setup-qemu-action@v3
-      with:
-        platforms: arm64
 
     - name: Cache C++ library build
       id: cache-lib
@@ -188,7 +182,7 @@ jobs:
           - os: ubuntu-latest
             arch: x86_64
             platform: linux
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             arch: aarch64
             platform: linux
           - os: macos-15-intel
