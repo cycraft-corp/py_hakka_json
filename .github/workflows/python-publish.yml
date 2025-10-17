@@ -40,10 +40,12 @@ jobs:
           - os: windows-latest
             arch: x86_64
             platform: win32
-          - os: windows-latest
-            arch: aarch64
-            platform: win32
-            continue-on-error: true
+          # Windows ARM64 disabled: ICU does not support ARM64 via Visual Studio project files
+          # Reference: https://github.com/cycraft-corp/py_hakka_json/actions/runs/18606666532/job/53057394675
+          # - os: windows-latest
+          #   arch: aarch64
+          #   platform: win32
+          #   continue-on-error: true
 
     steps:
     - name: Checkout repository with submodules
@@ -130,18 +132,6 @@ jobs:
         cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DICU_ARCH=x64
         cmake --build build --config Release --parallel
 
-    # Windows ARM64 build is disabled because ICU does not support ARM64 via Visual Studio project files
-    # ICU's allinone.sln only contains Win32 and x64 platform configurations
-    # MSBuild fails with: '/p:Platform=ARM64' - platform not defined in solution
-    # Reference: https://github.com/cycraft-corp/py_hakka_json/actions/runs/18606666532/job/53057394675
-    # TODO: Enable ARM64 support by switching to ICU CMake build system or using pre-built binaries
-    # - name: Build C++ library (Windows aarch64)
-    #   if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'aarch64'
-    #   run: |
-    #     cd py_hakka_json/_core/src/hakka_json/
-    #     cmake -S . -B build -G "Visual Studio 17 2022" -A ARM64 -DCMAKE_BUILD_TYPE=Release -DICU_ARCH=aarch64
-    #     cmake --build build --config Release --parallel
-
     - name: Cache Poetry dependencies
       uses: actions/cache@v4
       with:
@@ -222,10 +212,12 @@ jobs:
           - os: windows-latest
             arch: x86_64
             platform: win32
-          - os: windows-latest
-            arch: aarch64
-            platform: win32
-            continue-on-error: true
+          # Windows ARM64 disabled: ICU does not support ARM64 via Visual Studio project files
+          # Reference: https://github.com/cycraft-corp/py_hakka_json/actions/runs/18606666532/job/53057394675
+          # - os: windows-latest
+          #   arch: aarch64
+          #   platform: win32
+          #   continue-on-error: true
 
     steps:
     - name: Checkout repository
