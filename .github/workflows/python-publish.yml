@@ -127,14 +127,14 @@ jobs:
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'x86_64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
-        cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+        cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DICU_ARCH=x64
         cmake --build build --config Release --parallel
 
     - name: Build C++ library (Windows aarch64)
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'aarch64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
-        cmake -S . -B build -G "Visual Studio 17 2022" -A ARM64 -DCMAKE_BUILD_TYPE=Release
+        cmake -S . -B build -G "Visual Studio 17 2022" -A ARM64 -DCMAKE_BUILD_TYPE=Release -DICU_ARCH=aarch64
         cmake --build build --config Release --parallel
 
     - name: Cache Poetry dependencies
@@ -160,13 +160,23 @@ jobs:
       run: |
         poetry install
 
-    - name: Add ICU DLLs to PATH (Windows)
+    - name: Copy ICU DLLs to target directory (Windows)
       if: matrix.platform == 'win32'
       shell: pwsh
       run: |
-        $icuPath = Join-Path $env:GITHUB_WORKSPACE "py_hakka_json\_core\src\hakka_json\build\capi\Release"
-        echo "Adding ICU DLL path: $icuPath"
-        echo "$icuPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $sourcePath = Join-Path $env:GITHUB_WORKSPACE "py_hakka_json\_core\src\hakka_json\build\capi\Release"
+        $targetPath = Join-Path $env:GITHUB_WORKSPACE "py_hakka_json\_core\src\hakka_json\target\release"
+
+        Write-Host "Copying ICU DLLs from $sourcePath to $targetPath"
+
+        if (Test-Path $sourcePath) {
+          Get-ChildItem -Path $sourcePath -Filter "*.dll" | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $targetPath -Force
+            Write-Host "Copied: $($_.Name)"
+          }
+        } else {
+          Write-Host "Warning: Source path not found: $sourcePath"
+        }
 
     - name: Test with pytest
       run: |
