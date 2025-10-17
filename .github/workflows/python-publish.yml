@@ -76,8 +76,12 @@ jobs:
         path: |
           py_hakka_json/_core/src/hakka_json/target
           py_hakka_json/_core/src/hakka_json/build
-        key: ${{ matrix.platform }}-${{ matrix.arch }}-cmake-${{ hashFiles('py_hakka_json/_core/src/hakka_json/**/*.cpp', 'py_hakka_json/_core/src/hakka_json/**/*.h', 'py_hakka_json/_core/src/hakka_json/**/CMakeLists.txt') }}
+          py_hakka_json/_core/src/hakka_json/build/icu-install
+          py_hakka_json/_core/src/hakka_json/build/_deps/icu-src
+          py_hakka_json/_core/src/hakka_json/build/_deps/icu-build
+        key: ${{ matrix.platform }}-${{ matrix.arch }}-cmake-icu77-${{ hashFiles('py_hakka_json/_core/src/hakka_json/**/*.cpp', 'py_hakka_json/_core/src/hakka_json/**/*.h', 'py_hakka_json/_core/src/hakka_json/**/CMakeLists.txt') }}
         restore-keys: |
+          ${{ matrix.platform }}-${{ matrix.arch }}-cmake-icu77-
           ${{ matrix.platform }}-${{ matrix.arch }}-cmake-
 
     - name: Build C++ library (Linux x86_64)
@@ -120,19 +124,15 @@ jobs:
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'x86_64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
-        mkdir -p build
-        cd build
-        cmake .. -G "Visual Studio 17 2022" -A x64
-        cmake --build . --config Release
+        cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release --parallel
 
     - name: Build C++ library (Windows aarch64)
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'aarch64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
-        mkdir -p build
-        cd build
-        cmake .. -G "Visual Studio 17 2022" -A ARM64
-        cmake --build . --config Release
+        cmake -S . -B build -G "Visual Studio 17 2022" -A ARM64 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release --parallel
 
     - name: Cache Poetry dependencies
       uses: actions/cache@v4
