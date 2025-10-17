@@ -1,0 +1,237 @@
+name: Python Package CI
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build_and_test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            platform: linux
+          - os: ubuntu-latest
+            arch: aarch64
+            platform: linux
+          - os: macos-13
+            arch: x86_64
+            platform: darwin
+          - os: macos-latest
+            arch: aarch64
+            platform: darwin
+          - os: windows-latest
+            arch: x86_64
+            platform: win32
+          - os: windows-latest
+            arch: aarch64
+            platform: win32
+
+    steps:
+    - name: Checkout repository with submodules
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build
+
+    - name: Install dependencies (macOS)
+      if: matrix.platform == 'darwin'
+      run: |
+        brew install cmake ninja
+
+    - name: Install dependencies (Windows)
+      if: matrix.platform == 'win32'
+      run: |
+        choco install cmake
+
+    - name: Set up QEMU (Linux aarch64)
+      if: matrix.platform == 'linux' && matrix.arch == 'aarch64'
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64
+
+    - name: Cache C++ library build
+      id: cache-lib
+      uses: actions/cache@v4
+      with:
+        path: |
+          py_hakka_json/_core/src/hakka_json/target
+          py_hakka_json/_core/src/hakka_json/build
+        key: ${{ matrix.platform }}-${{ matrix.arch }}-cmake-${{ hashFiles('py_hakka_json/_core/src/hakka_json/**/*.cpp', 'py_hakka_json/_core/src/hakka_json/**/*.h', 'py_hakka_json/_core/src/hakka_json/**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ matrix.platform }}-${{ matrix.arch }}-cmake-
+
+    - name: Build C++ library (Linux x86_64)
+      if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'linux' && matrix.arch == 'x86_64'
+      run: |
+        cd py_hakka_json/_core/src/hakka_json/
+        cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja -Wno-dev
+        ninja
+
+    - name: Build C++ library (Linux aarch64)
+      if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'linux' && matrix.arch == 'aarch64'
+      run: |
+        cd py_hakka_json/_core/src/hakka_json/
+        cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_SYSTEM_PROCESSOR=aarch64 -Wno-dev
+        ninja
+
+    - name: Build C++ library (macOS x86_64)
+      if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'darwin' && matrix.arch == 'x86_64'
+      run: |
+        cd py_hakka_json/_core/src/hakka_json/
+        cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_OSX_ARCHITECTURES=x86_64 -Wno-dev
+        ninja
+
+    - name: Build C++ library (macOS aarch64)
+      if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'darwin' && matrix.arch == 'aarch64'
+      run: |
+        cd py_hakka_json/_core/src/hakka_json/
+        cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_OSX_ARCHITECTURES=arm64 -Wno-dev
+        ninja
+
+    - name: Build C++ library (Windows x86_64)
+      if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'x86_64'
+      run: |
+        cd py_hakka_json/_core/src/hakka_json/
+        cmake .. -G "Visual Studio 17 2022" -A x64
+        cmake --build . --config Release
+
+    - name: Build C++ library (Windows aarch64)
+      if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'aarch64'
+      run: |
+        cd py_hakka_json/_core/src/hakka_json/
+        cmake .. -G "Visual Studio 17 2022" -A ARM64
+        cmake --build . --config Release
+
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pypoetry
+          ~/.local/share/pypoetry
+          .venv
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Install Poetry
+      run: |
+        pip install poetry
+
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.in-project true
+
+    - name: Install Python dependencies
+      run: |
+        poetry install
+
+    - name: Test with pytest
+      run: |
+        poetry run pytest
+
+    - name: Upload built library as artifact
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: actions/upload-artifact@v4
+      with:
+        name: hakka-json-lib-${{ matrix.platform }}-${{ matrix.arch }}
+        path: py_hakka_json/_core/src/hakka_json/target/release/
+        retention-days: 1
+        if-no-files-found: error
+
+  release:
+    runs-on: ${{ matrix.os }}
+    needs: build_and_test
+    if: startsWith(github.ref, 'refs/tags/v')
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            platform: linux
+          - os: ubuntu-latest
+            arch: aarch64
+            platform: linux
+          - os: macos-13
+            arch: x86_64
+            platform: darwin
+          - os: macos-latest
+            arch: aarch64
+            platform: darwin
+          - os: windows-latest
+            arch: x86_64
+            platform: win32
+          - os: windows-latest
+            arch: aarch64
+            platform: win32
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Download built library artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: hakka-json-lib-${{ matrix.platform }}-${{ matrix.arch }}
+        path: py_hakka_json/_core/src/hakka_json/target/release/
+
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pypoetry
+          ~/.local/share/pypoetry
+          .venv
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Install Poetry
+      run: |
+        pip install poetry
+
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.in-project true
+
+    - name: Build wheel
+      run: |
+        poetry build
+
+    - name: Upload wheels to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/*.whl
+        fail_on_unmatched_files: true
