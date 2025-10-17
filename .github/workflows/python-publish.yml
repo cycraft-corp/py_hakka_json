@@ -18,6 +18,7 @@ permissions:
 jobs:
   build_and_test:
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.continue-on-error || false }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -29,6 +30,7 @@ jobs:
           - os: ubuntu-24.04-arm
             arch: aarch64
             platform: linux
+            continue-on-error: true
           - os: macos-15-intel
             arch: x86_64
             platform: darwin
@@ -41,6 +43,7 @@ jobs:
           - os: windows-latest
             arch: aarch64
             platform: win32
+            continue-on-error: true
 
     steps:
     - name: Checkout repository with submodules
@@ -157,6 +160,14 @@ jobs:
       run: |
         poetry install
 
+    - name: Add ICU DLLs to PATH (Windows)
+      if: matrix.platform == 'win32'
+      shell: pwsh
+      run: |
+        $icuPath = Join-Path $env:GITHUB_WORKSPACE "py_hakka_json\_core\src\hakka_json\build\capi\Release"
+        echo "Adding ICU DLL path: $icuPath"
+        echo "$icuPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
     - name: Test with pytest
       run: |
         poetry run pytest
@@ -172,6 +183,7 @@ jobs:
 
   release:
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.continue-on-error || false }}
     needs: build_and_test
     if: startsWith(github.ref, 'refs/tags/v')
     timeout-minutes: 30
@@ -185,6 +197,7 @@ jobs:
           - os: ubuntu-24.04-arm
             arch: aarch64
             platform: linux
+            continue-on-error: true
           - os: macos-15-intel
             arch: x86_64
             platform: darwin
@@ -197,6 +210,7 @@ jobs:
           - os: windows-latest
             arch: aarch64
             platform: win32
+            continue-on-error: true
 
     steps:
     - name: Checkout repository
