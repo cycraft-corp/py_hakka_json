@@ -1,0 +1,3 @@
+[submodule "py_hakka_json/_core/src/hakka_json"]
+	path = py_hakka_json/_core/src/hakka_json
+	url = ../hakka_json

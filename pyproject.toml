@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "py_hakka_json"
+version = "1.0.0"
+description = ""
+authors = ["scc <oscar.yang@cycraft.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+coverage = "^7.6.8"
+pytest = "^8.4.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
