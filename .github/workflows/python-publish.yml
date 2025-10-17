@@ -90,6 +90,8 @@ jobs:
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'linux' && matrix.arch == 'x86_64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
+        mkdir -p build
+        cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja -Wno-dev
         ninja
 
@@ -97,6 +99,8 @@ jobs:
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'linux' && matrix.arch == 'aarch64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
+        mkdir -p build
+        cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_SYSTEM_PROCESSOR=aarch64 -Wno-dev
         ninja
 
@@ -104,6 +108,8 @@ jobs:
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'darwin' && matrix.arch == 'x86_64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
+        mkdir -p build
+        cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_OSX_ARCHITECTURES=x86_64 -Wno-dev
         ninja
 
@@ -111,6 +117,8 @@ jobs:
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'darwin' && matrix.arch == 'aarch64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
+        mkdir -p build
+        cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_OSX_ARCHITECTURES=arm64 -Wno-dev
         ninja
 
@@ -118,6 +126,8 @@ jobs:
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'x86_64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
+        mkdir -p build
+        cd build
         cmake .. -G "Visual Studio 17 2022" -A x64
         cmake --build . --config Release
 
@@ -125,6 +135,8 @@ jobs:
       if: steps.cache-lib.outputs.cache-hit != 'true' && matrix.platform == 'win32' && matrix.arch == 'aarch64'
       run: |
         cd py_hakka_json/_core/src/hakka_json/
+        mkdir -p build
+        cd build
         cmake .. -G "Visual Studio 17 2022" -A ARM64
         cmake --build . --config Release
 
